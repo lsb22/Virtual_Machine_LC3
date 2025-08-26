@@ -28,6 +28,15 @@ uint16_t memory[MEMORY_MAX];
 // storing registers in array
 uint16_t reg[R_COUNT];
 
+// enum for conditional flags
+// lC3 has 3 confitional flags
+enum
+{
+    FL_POS = 1 << 0, /* P */
+    FL_ZRO = 1 << 1, /* Z */
+    FL_NEG = 1 << 2, /* N */
+};
+
 // enum for opcodes
 // LC3 has 16 opcodes
 // instruction(16 bits) -> opcode(first 4 bits) + parameters(rest 12 bits)
@@ -49,13 +58,4 @@ enum
     OP_RES,    /* reserved (unused) */
     OP_LEA,    /* load effective address */
     OP_TRAP    /* execute trap */
-};
-
-// enum for conditional flags
-// lC3 has 3 confitional flags
-enum
-{
-    FL_POS = 1 << 0, /* P */
-    FL_ZRO = 1 << 1, /* Z */
-    FL_NEG = 1 << 2, /* N */
 };
