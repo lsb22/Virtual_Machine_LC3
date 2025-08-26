@@ -50,3 +50,12 @@ enum
     OP_LEA,    /* load effective address */
     OP_TRAP    /* execute trap */
 };
+
+// enum for conditional flags
+// lC3 has 3 confitional flags
+enum
+{
+    FL_POS = 1 << 0, /* P */
+    FL_ZRO = 1 << 1, /* Z */
+    FL_NEG = 1 << 2, /* N */
+};
