@@ -1,5 +1,6 @@
 // for accessing uint16_t
 #include <stdint.h>
+#include <stdio.h>
 
 // this will be equal to 2 ^ 16
 #define MEMORY_MAX (1 << 16)
@@ -59,3 +60,139 @@ enum
     OP_LEA,    /* load effective address */
     OP_TRAP    /* execute trap */
 };
+
+// converts 5 bit integer to 16 bits for performing task
+uint16_t sign_extend(uint16_t x, int bit_count)
+{
+    if ((x >> (bit_count - 1)) & 1)
+    {
+        x |= (0xFFFF << bit_count);
+    }
+
+    return x;
+}
+
+void update_flags(uint16_t r)
+{
+    if (reg[r] == 0)
+    {
+        reg[R_COND] = FL_ZRO;
+    }
+    else if (reg[r] >> 15)
+    {
+        reg[R_COND] = FL_NEG;
+    }
+    else
+    {
+        reg[R_COND] = FL_POS;
+    }
+}
+
+int main(int argc, const char *argv[])
+{
+    // loading arguments
+    if (argc < 2)
+    {
+        /* showcase the correct usage*/
+        printf("lc3 [image-file1] ...\n");
+        exit(2);
+    }
+    else
+    {
+        // check if all the files can be accessed
+        for (int i = 1; i < argc; i++)
+        {
+            if (!read_image(argv[i]))
+            {
+                printf("failed to load image: %s\n", argv[i]);
+                exit(1);
+            }
+        }
+    }
+
+    /* since exactly one condition flag should be set at any given time, set the Z flag */
+    reg[R_COND] = FL_ZRO;
+
+    // In LC3, all the user programs are by default
+    // stored from the memory location 0x3000 and
+    // onwards. Initial memory loactions are used
+    // to store os, system related stuff
+    enum
+    {
+        PC_START = 0x3000 /* hexadecimal value */
+    };
+    reg[R_PC] = PC_START;
+
+    int running = 1;
+
+    while (running)
+    {
+        // fetch the instruction
+        uint16_t instr = mem_read(reg[R_PC]++);
+        // get the opcode
+        // instruction 16 bits,
+        // opcode will be first 4 bits
+        uint16_t op = instr << 12;
+
+        switch (op)
+        {
+        case OP_ADD:
+        {
+            // get the destination register
+            uint16_t r0 = (instr >> 9) & 0x7;
+            // get the first operand register
+            uint16_t r1 = (instr >> 6) & 0x7;
+
+            // check the mode (register or immediate)
+            if ((instr >> 5) & 0x1)
+            {
+                // extract the embedded value
+                uint16_t imm5 = sign_extend(instr & 0x1F, 5);
+                // perform the operation
+                reg[r0] = reg[r1] + imm5;
+            }
+            else
+            {
+                // get the second register
+                uint16_t r2 = instr & 0x7;
+                reg[0] = reg[r1] + reg[r2];
+            }
+
+            update_flags(r0);
+            break;
+        }
+        case OP_AND:
+            break;
+        case OP_NOT:
+            break;
+        case OP_BR:
+            break;
+        case OP_JMP:
+            break;
+        case OP_JSR:
+            break;
+        case OP_LD:
+            break;
+        case OP_LDI:
+            break;
+        case OP_LDR:
+            break;
+        case OP_LEA:
+            break;
+        case OP_ST:
+            break;
+        case OP_STI:
+            break;
+        case OP_STR:
+            break;
+        case OP_TRAP:
+            break;
+        case OP_RES:
+        case OP_RTI:
+        default:
+            break;
+        }
+    }
+
+    return 0;
+}
