@@ -132,7 +132,7 @@ int main(int argc, const char *argv[])
         // get the opcode
         // instruction 16 bits,
         // opcode will be first 4 bits
-        uint16_t op = instr << 12;
+        uint16_t op = instr >> 12;
 
         switch (op)
         {
@@ -174,7 +174,19 @@ int main(int argc, const char *argv[])
         case OP_LD:
             break;
         case OP_LDI:
+        {
+            // fetch the destination register
+            uint16_t r0 = (instr >> 9) & 0x7;
+            // fetch the PCoffset9
+            uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
+
+            // add the pc_offset with the PC value to get
+            // the intermediate address that holds the final
+            // address
+            reg[r0] = mem_read(mem_read(reg[R_PC] + pc_offset));
+            update_flags(r0);
             break;
+        }
         case OP_LDR:
             break;
         case OP_LEA:
