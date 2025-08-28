@@ -201,6 +201,7 @@ int main(int argc, const char *argv[])
             break;
         case OP_RES:
         case OP_RTI:
+            abort();
         default:
             break;
         }
