@@ -197,6 +197,7 @@ int main(int argc, const char *argv[])
         }
         case OP_BR:
         {
+            // for conditional branching
             uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
             uint16_t cond_flag = (instr >> 9) & 0x7;
 
