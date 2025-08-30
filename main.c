@@ -196,7 +196,17 @@ int main(int argc, const char *argv[])
             break;
         }
         case OP_BR:
+        {
+            uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
+            uint16_t cond_flag = (instr >> 9) & 0x7;
+
+            if (cond_flag & reg[R_COND])
+            {
+                // update pc to fetch instructions from the new loaction
+                reg[R_PC] += pc_offset;
+            }
             break;
+        }
         case OP_JMP:
             break;
         case OP_JSR:
