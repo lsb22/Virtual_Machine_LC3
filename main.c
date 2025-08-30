@@ -61,7 +61,7 @@ enum
     OP_TRAP    /* execute trap */
 };
 
-// converts 5 bit integer to 16 bits for performing task
+// extends lower bit integer to 16 bits for performing task
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
     if ((x >> (bit_count - 1)) & 1)
