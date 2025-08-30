@@ -209,7 +209,15 @@ int main(int argc, const char *argv[])
             break;
         }
         case OP_JMP:
+        {
+            // to jump unconditionally to the location specified by base register
+            // bits -> [8:6] represent base register
+            // this code also handle RET opcode
+            // fetch base register
+            uint16_t r1 = (instr >> 6) & 0x7;
+            reg[R_PC] = reg[r1];
             break;
+        }
         case OP_JSR:
             break;
         case OP_LD:
