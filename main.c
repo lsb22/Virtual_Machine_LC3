@@ -219,7 +219,27 @@ int main(int argc, const char *argv[])
             break;
         }
         case OP_JSR:
+        {
+            // for handling subroutines(other functions) calls
+            // first store the current pc value to R7(register 7)
+            // then if the base register (bit[11]) if set, get the
+            // address of subroutine from the instruction (bits[10:0])
+            // else get it from the base register(bits[8:6])
+            uint16_t flag = (instr >> 11) & 1;
+            reg[R_R7] = reg[R_PC];
+
+            if (flag)
+            {
+                uint16_t pc_offset = sign_extend(instr & 0x7FF, 11);
+                reg[R_PC] += pc_offset; /* JSR */
+            }
+            else
+            {
+                uint16_t r1 = (instr >> 6) & 0x7;
+                reg[R_PC] = reg[r1]; /* JSRR */
+            }
             break;
+        }
         case OP_LD:
             break;
         case OP_LDI:
