@@ -72,6 +72,55 @@ enum
     TRAP_HALT = 0x25   /* halt the program */
 };
 
+// converts b/w big-endian and little-endian
+uint16_t swap16(uint16_t x)
+{
+    return (x << 8) | (x >> 8);
+}
+
+void read_image_file(FILE *file)
+{
+    // The first 16 bits of the program file specify the
+    // address in memory where the program should start.
+    // we call this as origin address. we need to read
+    // this first
+    uint16_t origin; /* the origin tells us where in memory to place the image */
+    // fread(ptr,blockSize,blockNum,fileName)
+    // fread reads the file specified by fileName
+    // blockSize -> size of each block
+    // blockNum -> number of blocks to be read
+    // Ultimately fread() will read the specified
+    // number of blocks and will store it as an
+    // array from the address pointed by ptr
+    fread(&origin, sizeof(origin), 1, file);
+    // LC-3 programs are big-endian, but most modern
+    // computers are little-endian. So, we need to swap
+    // each uint16 that is loaded.
+    origin = swap16(origin);
+
+    // max_read represents the max size of the file
+    uint16_t max_read = MEMORY_MAX - origin;
+    // compute the starting address to store the entire program
+    uint16_t *p = memory + origin;
+    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+    while (read-- > 0)
+    {
+        *p = swap16(*p);
+        ++p;
+    }
+}
+
+int read_image(const char *image_path)
+{
+    FILE *file = fopen(image_path, "rb");
+    if (!file)
+        return 0;
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
+
 // extends lower bit integer to 16 bits for performing task
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
