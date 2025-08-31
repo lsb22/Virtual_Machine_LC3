@@ -61,6 +61,17 @@ enum
     OP_TRAP    /* execute trap */
 };
 
+// enum for trap code
+enum
+{
+    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0x21,   /* output a character */
+    TRAP_PUTS = 0x22,  /* output a word string */
+    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0x24, /* output a byte string */
+    TRAP_HALT = 0x25   /* halt the program */
+};
+
 // extends lower bit integer to 16 bits for performing task
 uint16_t sign_extend(uint16_t x, int bit_count)
 {
@@ -311,7 +322,36 @@ int main(int argc, const char *argv[])
             break;
         }
         case OP_TRAP:
+        {
+            reg[R_R7] = reg[R_PC];
+            switch (instr & 0xFF)
+            {
+            case TRAP_GETC:
+                break;
+            case TRAP_OUT:
+                break;
+            case TRAP_PUTS:
+            {
+                uint16_t *c = memory + reg[R_R0];
+                /*loop stops when c hits x0000 or null*/
+                while (*c)
+                {
+                    // convert 16 bit character to 8 bits
+                    putc((char)*c, stdout); /* puts character to a buffer whose destination is stdout*/
+                    ++c;
+                }
+                fflush(stdout); /*sends the content of the buffer to stdout i.e. console*/
+                break;
+            }
+            case TRAP_IN:
+                break;
+            case TRAP_PUTSP:
+                break;
+            case TRAP_HALT:
+                break;
+            }
             break;
+        }
         case OP_RES:
         case OP_RTI:
             abort();
