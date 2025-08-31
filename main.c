@@ -327,7 +327,12 @@ int main(int argc, const char *argv[])
             switch (instr & 0xFF)
             {
             case TRAP_GETC:
+            {
+                // getchar built in function to read char from keyboard
+                reg[R_R0] = (uint16_t)getchar();
+                update_flags(R_R0);
                 break;
+            }
             case TRAP_OUT:
                 break;
             case TRAP_PUTS:
