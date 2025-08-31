@@ -381,7 +381,12 @@ int main(int argc, const char *argv[])
                 break;
             }
             case TRAP_HALT:
+            {
+                puts("HALT"); /*writes string to the standard output*/
+                fflush(stdout);
+                running = 0;
                 break;
+            }
             }
             break;
         }
