@@ -4,9 +4,6 @@
 #include <Windows.h>
 #include <conio.h> /* to access _kbhit */
 
-// this will be equal to 2 ^ 16
-#define MEMORY_MAX (1 << 16)
-
 // enum for registers, LC3 has 10 registers, each can hold 16 bit unsigned integer
 enum
 {
@@ -22,14 +19,6 @@ enum
     R_COND, /* Conditional register */
     R_COUNT
 };
-
-// creating the memory
-// uint16_t -> unsigned int of 16 bits
-// LC3 has 65,536(2^16) memory locations each of size 16 bits
-uint16_t memory[MEMORY_MAX];
-
-// storing registers in array
-uint16_t reg[R_COUNT];
 
 // enum for conditional flags
 // lC3 has 3 confitional flags
@@ -82,6 +71,17 @@ enum
     MR_KBSR = 0xFE00,
     MR_KBDR = 0xFE02
 };
+
+// this will be equal to 2 ^ 16
+#define MEMORY_MAX (1 << 16)
+
+// creating the memory
+// uint16_t -> unsigned int of 16 bits
+// LC3 has 65,536(2^16) memory locations each of size 16 bits
+uint16_t memory[MEMORY_MAX];
+
+// storing registers in array
+uint16_t reg[R_COUNT];
 
 HANDLE hStdin = INVALID_HANDLE_VALUE;
 DWORD fdwMode, fdwOldMode;
@@ -221,16 +221,13 @@ int main(int argc, const char *argv[])
         printf("lc3 [image-file1] ...\n");
         exit(2);
     }
-    else
+    // check if all the files can be accessed
+    for (int i = 1; i < argc; i++)
     {
-        // check if all the files can be accessed
-        for (int i = 1; i < argc; i++)
+        if (!read_image(argv[i]))
         {
-            if (!read_image(argv[i]))
-            {
-                printf("failed to load image: %s\n", argv[i]);
-                exit(1);
-            }
+            printf("failed to load image: %s\n", argv[i]);
+            exit(1);
         }
     }
 
@@ -286,8 +283,8 @@ int main(int argc, const char *argv[])
             }
 
             update_flags(r0);
-            break;
         }
+        break;
         case OP_AND:
         {
             // fetch destination register
@@ -309,8 +306,8 @@ int main(int argc, const char *argv[])
             }
 
             update_flags(r0);
-            break;
         }
+        break;
         case OP_NOT:
         {
             // desttination register
@@ -320,8 +317,8 @@ int main(int argc, const char *argv[])
 
             reg[r0] = ~reg[r1];
             update_flags(r0);
-            break;
         }
+        break;
         case OP_BR:
         {
             // for conditional branching
@@ -333,8 +330,8 @@ int main(int argc, const char *argv[])
                 // update pc to fetch instructions from the new loaction
                 reg[R_PC] += pc_offset;
             }
-            break;
         }
+        break;
         case OP_JMP:
         {
             // to jump unconditionally to the location specified by base register
@@ -343,8 +340,8 @@ int main(int argc, const char *argv[])
             // fetch base register
             uint16_t r1 = (instr >> 6) & 0x7;
             reg[R_PC] = reg[r1];
-            break;
         }
+        break;
         case OP_JSR:
         {
             // for handling subroutines(other functions) calls
@@ -365,8 +362,8 @@ int main(int argc, const char *argv[])
                 uint16_t r1 = (instr >> 6) & 0x7;
                 reg[R_PC] = reg[r1]; /* JSRR */
             }
-            break;
         }
+        break;
         case OP_LD:
         {
             // load the destination register
@@ -376,8 +373,8 @@ int main(int argc, const char *argv[])
             // read the content from the memory by adding current pc + pc_offset
             reg[r0] = mem_read(reg[R_PC] + pc_offset);
             update_flags(r0);
-            break;
         }
+        break;
         case OP_LDI:
         {
             // fetch the destination register
@@ -390,8 +387,8 @@ int main(int argc, const char *argv[])
             // address
             reg[r0] = mem_read(mem_read(reg[R_PC] + pc_offset));
             update_flags(r0);
-            break;
         }
+        break;
         case OP_LDR:
         {
             // LDR -> load register
@@ -401,8 +398,8 @@ int main(int argc, const char *argv[])
             reg[r0] = mem_read(reg[r1] + offset);
 
             update_flags(r0);
-            break;
         }
+        break;
         case OP_LEA:
         {
             // LEA -> Load Effective Address
@@ -410,24 +407,24 @@ int main(int argc, const char *argv[])
             uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
             reg[r0] = reg[R_PC] + pc_offset;
             update_flags(r0);
-            break;
         }
+        break;
         case OP_ST:
         {
             // ST -> Store
             uint16_t r0 = (instr >> 9) & 0x7;
             uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
             mem_write(reg[R_PC] + pc_offset, reg[r0]);
-            break;
         }
+        break;
         case OP_STI:
         {
             // STI -> store indirect
             uint16_t r0 = (instr >> 9) & 0x7;
             uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
             mem_write(mem_read(reg[R_PC] + pc_offset), reg[r0]);
-            break;
         }
+        break;
         case OP_STR:
         {
             // STR -> Store register
@@ -435,8 +432,8 @@ int main(int argc, const char *argv[])
             uint16_t r1 = (instr >> 6) & 0x7;
             uint16_t offset = sign_extend(instr & 0x3F, 6);
             mem_write(reg[r1] + offset, reg[r0]);
-            break;
         }
+        break;
         case OP_TRAP:
         {
             reg[R_R7] = reg[R_PC];
@@ -447,14 +444,14 @@ int main(int argc, const char *argv[])
                 // getchar built in function to read char from keyboard
                 reg[R_R0] = (uint16_t)getchar();
                 update_flags(R_R0);
-                break;
             }
+            break;
             case TRAP_OUT:
             {
                 putc((char)reg[R_R0], stdout);
                 fflush(stdout);
-                break;
             }
+            break;
             case TRAP_PUTS:
             {
                 uint16_t *c = memory + reg[R_R0];
@@ -466,8 +463,8 @@ int main(int argc, const char *argv[])
                     ++c;
                 }
                 fflush(stdout); /*sends the content of the buffer to stdout i.e. console*/
-                break;
             }
+            break;
             case TRAP_IN:
             {
                 printf("Enter a character: ");
@@ -476,8 +473,8 @@ int main(int argc, const char *argv[])
                 fflush(stdout);
                 reg[R_R0] = (uint16_t)c;
                 update_flags(R_R0);
-                break;
             }
+            break;
             case TRAP_PUTSP:
             {
                 // each memory location can have two characters,
@@ -494,22 +491,22 @@ int main(int argc, const char *argv[])
                     ++c;
                 }
                 fflush(stdout);
-                break;
             }
+            break;
             case TRAP_HALT:
             {
                 puts("HALT"); /*writes string to the standard output*/
                 fflush(stdout);
                 running = 0;
-                break;
-            }
             }
             break;
+            }
         }
+        break;
         case OP_RES:
         case OP_RTI:
-            abort();
         default:
+            abort();
             break;
         }
     }
