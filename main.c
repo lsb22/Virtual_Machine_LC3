@@ -1,6 +1,8 @@
-// for accessing uint16_t
-#include <stdint.h>
+#include <stdint.h> /* for accessing uint16_t */
 #include <stdio.h>
+#include <signal.h>
+#include <Windows.h>
+#include <conio.h> /* to access _kbhit */
 
 // this will be equal to 2 ^ 16
 #define MEMORY_MAX (1 << 16)
@@ -71,6 +73,46 @@ enum
     TRAP_PUTSP = 0x24, /* output a byte string */
     TRAP_HALT = 0x25   /* halt the program */
 };
+
+// MR -> Memory Register
+// KBSR -> Key Board Status Register
+// KBDR -> Key Board Data Register
+enum
+{
+    MR_KBSR = 0xFE00,
+    MR_KBDR = 0xFE02
+};
+
+HANDLE hStdin = INVALID_HANDLE_VALUE;
+DWORD fdwMode, fdwOldMode;
+
+void disable_input_buffering()
+{
+    hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hStdin, &fdwOldMode);     /* save old mode */
+    fdwMode = fdwOldMode ^ ENABLE_ECHO_INPUT /* no input echo */
+              ^ ENABLE_LINE_INPUT;           /* return when one or
+                                                more characters are available */
+    SetConsoleMode(hStdin, fdwMode);         /* set new mode */
+    FlushConsoleInputBuffer(hStdin);         /* clear buffer */
+}
+
+void restore_input_buffering()
+{
+    SetConsoleMode(hStdin, fdwOldMode); /* Restore the original console settings*/
+}
+
+uint16_t check_key()
+{
+    return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
+}
+
+void handle_interrupt(int signal)
+{
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}
 
 // converts b/w big-endian and little-endian
 uint16_t swap16(uint16_t x)
@@ -148,6 +190,28 @@ void update_flags(uint16_t r)
     }
 }
 
+void mem_write(uint16_t address, uint16_t val)
+{
+    memory[address] = val;
+}
+
+uint16_t mem_read(uint16_t address)
+{
+    if (address == MR_KBSR)
+    {
+        if (check_key())
+        {
+            memory[MR_KBSR] = (1 << 15);
+            memory[MR_KBDR] = getchar();
+        }
+        else
+        {
+            memory[MR_KBSR] = 0;
+        }
+    }
+    return memory[address];
+}
+
 int main(int argc, const char *argv[])
 {
     // loading arguments
@@ -169,6 +233,9 @@ int main(int argc, const char *argv[])
             }
         }
     }
+
+    signal(SIGINT, handle_interrupt); /* call handle_interrupt when CTRL + C is pressed*/
+    disable_input_buffering();        /* To change console settings */
 
     /* since exactly one condition flag should be set at any given time, set the Z flag */
     reg[R_COND] = FL_ZRO;
@@ -447,5 +514,5 @@ int main(int argc, const char *argv[])
         }
     }
 
-    return 0;
+    restore_input_buffering();
 }

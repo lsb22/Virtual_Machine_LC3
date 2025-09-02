@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "_mingw.h": "c"
+        "_mingw.h": "c",
+        "windows.h": "c"
     }
 }
