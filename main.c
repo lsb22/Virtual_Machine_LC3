@@ -84,17 +84,24 @@ uint16_t memory[MEMORY_MAX];
 uint16_t reg[R_COUNT];
 
 HANDLE hStdin = INVALID_HANDLE_VALUE;
+/* DWORD represents 32 bit unsigned integer */
 DWORD fdwMode, fdwOldMode;
 
+// changes console settings
+/* ENABLE_ECHO_INPUT -> disabling this would prevent the printing of characters to console on key press */
+/*
+ENABLE_LINE_INPUT -> disabling this would allow the program to access the entered characters
+directly without having to wait for the user to press Enter key
+*/
 void disable_input_buffering()
 {
-    hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    hStdin = GetStdHandle(STD_INPUT_HANDLE); /* gets a reference to the input buffer*/
     GetConsoleMode(hStdin, &fdwOldMode);     /* save old mode */
     fdwMode = fdwOldMode ^ ENABLE_ECHO_INPUT /* no input echo */
               ^ ENABLE_LINE_INPUT;           /* return when one or
                                                 more characters are available */
     SetConsoleMode(hStdin, fdwMode);         /* set new mode */
-    FlushConsoleInputBuffer(hStdin);         /* clear buffer */
+    FlushConsoleInputBuffer(hStdin);         /* clear buffer, to get rid of previously entered values */
 }
 
 void restore_input_buffering()
@@ -102,13 +109,31 @@ void restore_input_buffering()
     SetConsoleMode(hStdin, fdwOldMode); /* Restore the original console settings*/
 }
 
+/*
+WaitForSingleObject(hStdin, 1000) this checks if hStdin (a reference to input buffer)
+has been signaled, i.e. if it has been informed about a key press. This would wait for
+1 second(halts program for 1sec). If hStdin was signaled it would return WAIT_OBJECT_0
+*/
+
+/* _kbhit checks input buffer for any available character that was entered by user. */
+
 uint16_t check_key()
 {
+    /*
+    This below line makes sures that input was given and the input
+    is available in the input buffer ready to be read. Through this
+    we can avoid accessing input buffer early i.e. when character
+    has been entered but still not loaded to input buffer.
+    */
     return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
 }
 
 void handle_interrupt(int signal)
 {
+    /*
+    Restore the original console settings when program
+    is terminated abruptlly by pressing CTRL + C
+    */
     restore_input_buffering();
     printf("\n");
     exit(-2);
@@ -122,22 +147,28 @@ uint16_t swap16(uint16_t x)
 
 void read_image_file(FILE *file)
 {
-    // The first 16 bits of the program file specify the
-    // address in memory where the program should start.
-    // we call this as origin address. we need to read
-    // this first
+    /*
+    The first 16 bits of the program file specify the
+    address in memory where the program should start.
+    we call this as origin address. we need to read
+    this first
+    */
     uint16_t origin; /* the origin tells us where in memory to place the image */
-    // fread(ptr,blockSize,blockNum,fileName)
-    // fread reads the file specified by fileName
-    // blockSize -> size of each block
-    // blockNum -> number of blocks to be read
-    // Ultimately fread() will read the specified
-    // number of blocks and will store it as an
-    // array from the address pointed by ptr
+    /*
+    fread(ptr,blockSize,blockNum,fileName)
+    fread reads the file specified by fileName
+    blockSize -> size of each block
+    blockNum -> number of blocks to be read
+    Ultimately fread() will read the specified
+    number of blocks and will store it as an
+    array from the address pointed by ptr
+    */
     fread(&origin, sizeof(origin), 1, file);
-    // LC-3 programs are big-endian, but most modern
-    // computers are little-endian. So, we need to swap
-    // each uint16 that is loaded.
+    /*
+    LC-3 programs are big-endian, but most modern
+    computers are little-endian. So, we need to swap
+    each uint16 that is loaded.
+    */
     origin = swap16(origin);
 
     // max_read represents the max size of the file
@@ -237,10 +268,12 @@ int main(int argc, const char *argv[])
     /* since exactly one condition flag should be set at any given time, set the Z flag */
     reg[R_COND] = FL_ZRO;
 
-    // In LC3, all the user programs are by default
-    // stored from the memory location 0x3000 and
-    // onwards. Initial memory loactions are used
-    // to store os, system related stuff
+    /*
+    In LC3, all the user programs are by default
+    stored from the memory location 0x3000 and
+    onwards. Initial memory loactions are used
+    to store os, system related stuff
+    */
     enum
     {
         PC_START = 0x3000 /* hexadecimal value */
@@ -253,9 +286,11 @@ int main(int argc, const char *argv[])
     {
         // fetch the instruction
         uint16_t instr = mem_read(reg[R_PC]++);
-        // get the opcode
-        // instruction 16 bits,
-        // opcode will be first 4 bits
+        /*
+        get the opcode
+        instruction 16 bits,
+        opcode will be first 4 bits
+        */
         uint16_t op = instr >> 12;
 
         switch (op)
@@ -334,21 +369,25 @@ int main(int argc, const char *argv[])
         break;
         case OP_JMP:
         {
-            // to jump unconditionally to the location specified by base register
-            // bits -> [8:6] represent base register
-            // this code also handle RET opcode
-            // fetch base register
+            /*
+            to jump unconditionally to the location specified by base register
+            bits -> [8:6] represent base register
+            this code also handle RET opcode
+            fetch base register
+            */
             uint16_t r1 = (instr >> 6) & 0x7;
             reg[R_PC] = reg[r1];
         }
         break;
         case OP_JSR:
         {
-            // for handling subroutines(other functions) calls
-            // first store the current pc value to R7(register 7)
-            // then if the base register (bit[11]) if set, get the
-            // address of subroutine from the instruction (bits[10:0])
-            // else get it from the base register(bits[8:6])
+            /*
+            for handling subroutines(other functions) calls
+            first store the current pc value to R7(register 7)
+            then if the base register (bit[11]) if set, get the
+            address of subroutine from the instruction (bits[10:0])
+            else get it from the base register(bits[8:6])
+            */
             uint16_t flag = (instr >> 11) & 1;
             reg[R_R7] = reg[R_PC];
 
@@ -477,9 +516,11 @@ int main(int argc, const char *argv[])
             break;
             case TRAP_PUTSP:
             {
-                // each memory location can have two characters,
-                // each of 8 bits. First character is from [7:0],
-                // second is from [15:8]
+                /*
+                each memory location can have two characters,
+                each of 8 bits. First character is from [7:0],
+                second is from [15:8]
+                */
                 uint16_t *c = memory + reg[R_R0];
                 while (*c)
                 {
