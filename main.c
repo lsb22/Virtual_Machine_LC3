@@ -314,7 +314,7 @@ int main(int argc, const char *argv[])
             {
                 // get the second register
                 uint16_t r2 = instr & 0x7;
-                reg[0] = reg[r1] + reg[r2];
+                reg[r0] = reg[r1] + reg[r2];
             }
 
             update_flags(r0);
